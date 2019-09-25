@@ -14,6 +14,5 @@ object kagglemain extends App {
   val df_train_test = df_train.union(df_test)
   df_train_test.show()
 
-
   spark.close()
 }
