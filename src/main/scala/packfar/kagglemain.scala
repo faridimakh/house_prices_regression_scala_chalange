@@ -14,7 +14,6 @@ object kagglemain extends App {
   val df_train_test = df_train.union(df_test)
   df_train_test.show(2)
 
-
   //val df_key=df_train.select_cols_by_names(List("Id"))
   //val df_numerics=df_train.select_cols_By_Type(IntegerType).conveting_multiple_columns_to_specific_DataType(DoubleType).drop("Id")
   //val df_categorial=df_train.select_Impute_And_Transform_categorical_to_numerical()
