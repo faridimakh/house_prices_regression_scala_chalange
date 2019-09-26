@@ -114,7 +114,7 @@ package object packfar {
       col_names.foreach(x => df0 = df0.withColumn(x + "_dateformat", date_add(to_date(trim(col(x).cast("String")), "YYYY"), 5)))
       df0 = df0.select_cols_by_names(df0.columns.filter(x => x.endsWith("_dateformat")).toList).toDF(col_names: _*)
       df0
-      // TODO: add new feature over date types columnes after
+      // TODO: add new features over date types columnes after
 //      val df55= df_date_var.convert_dateframe_integers_type_to_dates()
 //        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
 //      df55.show()
