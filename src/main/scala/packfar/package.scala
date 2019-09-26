@@ -1,7 +1,7 @@
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{Imputer, StringIndexer}
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.{col, date_add, monotonically_increasing_id, to_date, trim}
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 package object packfar {
@@ -115,9 +115,9 @@ package object packfar {
       df0 = df0.select_cols_by_names(df0.columns.filter(x => x.endsWith("_dateformat")).toList).toDF(col_names: _*)
       df0
       // TODO: add new features over date types columnes after
-//      val df55= df_date_var.convert_dateframe_integers_type_to_dates()
-//        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
-//      df55.show()
+      //      val df55= df_date_var.convert_dateframe_integers_type_to_dates()
+      //        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
+      //      df55.show()
     }
 
 
