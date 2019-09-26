@@ -1,8 +1,8 @@
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.{Imputer, StringIndexer}
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.{col, monotonically_increasing_id}
-import org.apache.spark.sql.types.{DataType, DoubleType, StringType}
+import org.apache.spark.sql.functions.{col, date_add, monotonically_increasing_id, to_date, trim}
+import org.apache.spark.sql.types._
 
 package object packfar {
 
@@ -34,7 +34,7 @@ package object packfar {
       }
     }
 
-    def join_df2_by_index(df0:DataFrame): DataFrame = {
+    def join_df2_by_index(df0: DataFrame): DataFrame = {
       val df1 = df.withColumn("Id2", monotonically_increasing_id)
       val df2 = df0.withColumn("Id2", monotonically_increasing_id)
       df1.join(df2, "Id2").drop("Id2")
@@ -78,12 +78,12 @@ package object packfar {
       val inds = feat.map { colName =>
         new StringIndexer()
           .setInputCol(colName)
-          .setOutputCol(colName + "I")
+          .setOutputCol(colName + "catI")
           .fit(df1)
       }
       val pipeline = new Pipeline().setStages(inds).fit(df1).transform(df1)
       pipeline
-        .select_cols_by_names(pipeline.columns.filter(x => x.endsWith("I"))
+        .select_cols_by_names(pipeline.columns.filter(x => x.endsWith("catI"))
           .toList).toDF(feat: _*)
     }
 
@@ -95,7 +95,7 @@ package object packfar {
       df_returned
     }
 
-    def impute_numeric_vars_with_mean_or_median(strategy_imputation_mean_or_median: String="mean"): DataFrame = {
+    def impute_numeric_vars_with_mean_or_median(strategy_imputation_mean_or_median: String = "mean"): DataFrame = {
       if (!Set("mean", "median").contains(strategy_imputation_mean_or_median)) {
         println("le parametre d'imputation doit apartenir à {mean,median}!")
         null
@@ -107,6 +107,19 @@ package object packfar {
         df_returned
       }
     }
+
+    def convert_dateframe_integers_type_to_dates(): DataFrame = {
+      var df0 = df
+      val col_names = df.columns.toList
+      col_names.foreach(x => df0 = df0.withColumn(x + "_dateformat", date_add(to_date(trim(col(x).cast("String")), "YYYY"), 5)))
+      df0 = df0.select_cols_by_names(df0.columns.filter(x => x.endsWith("_dateformat")).toList).toDF(col_names: _*)
+      df0
+      // TODO: add new feature over date types columnes after
+//      val df55= df_date_var.convert_dateframe_integers_type_to_dates()
+//        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
+//      df55.show()
+    }
+
 
   }
 

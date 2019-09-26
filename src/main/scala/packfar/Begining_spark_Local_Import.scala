@@ -14,4 +14,3 @@ class Begining_spark_Local_Import() {
       load(csv_pah)
   }
 }
-
