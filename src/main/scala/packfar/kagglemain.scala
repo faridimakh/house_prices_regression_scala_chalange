@@ -1,6 +1,7 @@
 package packfar
-import org.apache.spark.ml.regression.LinearRegression
+
 import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.regression.RandomForestRegressor
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{FloatType, IntegerType}
@@ -31,19 +32,15 @@ object kagglemain extends App {
   val df_num_cible_train = df_num_cible_train_test.where(col("SalePrice") =!= 0)
   val df_num_cible_test = df_num_cible_train_test.where(col("SalePrice") === 0).drop("SalePrice")
 
-//
+  //
   val assembler = new VectorAssembler().setInputCols(df_num_cible_test.columns).setOutputCol("features")
-  val df_num_cible_train_assembled=assembler.transform(df_num_cible_train).select("SalePrice","features")
-    .withColumnRenamed("SalePrice","label")
+  val df_num_cible_train_assembled = assembler.transform(df_num_cible_train).select("SalePrice", "features")
+    .withColumnRenamed("SalePrice", "label")
 
-val lr = new LinearRegression()
-  .setMaxIter(10)
-  .setRegParam(0.3)
-  .setElasticNetParam(0.8)
+  val rf = new RandomForestRegressor().setNumTrees(1000).setMaxDepth(20)
 
- val  mod=lr.fit(df_num_cible_train_assembled)
+  val mod = rf.fit(df_num_cible_train_assembled)
   //val mopipline=new Pipeline().setStages(Array(assembler, lr))
-  println(mod.coefficients)
-mod.transform(df_num_cible_train_assembled).show()
+  mod.transform(df_num_cible_train_assembled).show()
   spark.close()
 }
