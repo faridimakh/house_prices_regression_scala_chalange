@@ -42,7 +42,7 @@ val lr = new LinearRegression()
   .setElasticNetParam(0.8)
 
  val  mod=lr.fit(df_num_cible_train_assembled)
-
+  //val mopipline=new Pipeline().setStages(Array(assembler, lr))
   println(mod.coefficients)
 mod.transform(df_num_cible_train_assembled).show()
   spark.close()
