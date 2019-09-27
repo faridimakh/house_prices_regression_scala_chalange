@@ -1,5 +1,6 @@
 import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.{Imputer, StringIndexer}
+import org.apache.spark.ml.clustering.KMeans
+import org.apache.spark.ml.feature.{Imputer, StringIndexer, VectorAssembler}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
@@ -119,8 +120,63 @@ package object packfar {
       //        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
       //      df55.show()
     }
+    def regularisation_training_compared_to_testing(df_train: DataFrame, df_test: DataFrame, nb_classe: Int = 100, nb_itter: Int = 20): List[DataFrame] = {
+      val to_predict_var = df_train.columns.toSet.diff(df_test.columns.toSet).head
+      val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
+      val df_train_assembled = assembler.transform(df_train).select("features", to_predict_var)
+      val df_test_assembled = assembler.transform(df_test).select("features")
+
+      val kmean_model = new KMeans().setK(nb_classe).setMaxIter(nb_itter).fit(df_train_assembled)
+
+      val set_class_test = kmean_model.transform(df_test_assembled).select("prediction").rdd.map(x => x(0)).collect().toList
+        .distinct.toString.replace("List", "")
+
+      val df_train__assembled_and_regularised = kmean_model.transform(df_train_assembled)
+        .where("prediction in" + set_class_test + "")
+        .select("features", to_predict_var)
+      List(df_train__assembled_and_regularised, df_test_assembled)
+    }
 
 
+  }
+  def regularisation_training_compared_to_testing(df_train: DataFrame, df_test: DataFrame, nb_classe: Int = 20, nb_itter: Int = 20): List[DataFrame] = {
+    val to_predict_var = df_train.columns.toSet.diff(df_test.columns.toSet).head
+    val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
+    val df_train_assembled = assembler.transform(df_train).select("features", to_predict_var)
+    val df_test_assembled = assembler.transform(df_test).select("features")
+
+    val kmean_model = new KMeans().setK(nb_classe).setMaxIter(nb_itter).setSeed(123).fit(df_train_assembled)
+
+    val set_class_test = kmean_model.transform(df_test_assembled).select("prediction").rdd.map(x => x(0)).collect().toList
+      .distinct.toString.replace("List", "")
+
+    val df_train__assembled_and_regularised = kmean_model.transform(df_train_assembled)
+      .where("prediction in" + set_class_test + "")
+      .select("features", to_predict_var).withColumnRenamed(to_predict_var,"label")
+    List(df_train__assembled_and_regularised, df_test_assembled,df_train_assembled.withColumnRenamed(to_predict_var,"label"))
+  }
+
+
+  def regularisation_training_compared_to_testing_bis(df: DataFrame, to_predict_var:String,nb_classe: Int = 20, nb_itter: Int = 20): List[DataFrame] = {
+    val df_train=df.randomSplit(Array(0.7,0.3))(0)
+    val df_test=df.randomSplit(Array(0.7,0.3))(1).drop(to_predict_var)
+    val df_testBIS=df.randomSplit(Array(0.7,0.3))(1)
+
+    val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
+
+    val df_train_assembled = assembler.transform(df_train).select("features", to_predict_var)
+    val df_test_assembled = assembler.transform(df_test).select("features")
+    val df_test_assembledBIS = assembler.transform(df_testBIS).select("features",to_predict_var)
+
+    val kmean_model = new KMeans().setK(nb_classe).setMaxIter(nb_itter).setSeed(123).fit(df_train_assembled)
+
+    val set_class_test = kmean_model.transform(df_test_assembled).select("prediction").rdd.map(x => x(0)).collect().toList
+      .distinct.toString.replace("List", "")
+
+    val df_train__assembled_and_regularised = kmean_model.transform(df_train_assembled)
+      .where("prediction in" + set_class_test + "")
+      .select("features", to_predict_var).withColumnRenamed(to_predict_var,"label")
+    List(df_train__assembled_and_regularised, df_test_assembled,df_test_assembledBIS.withColumnRenamed(to_predict_var,"label"))
   }
 
 
