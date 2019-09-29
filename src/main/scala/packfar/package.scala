@@ -41,13 +41,13 @@ package object packfar {
       df1.join(df2, "Id2").drop("Id2")
     }
 
-    def get_Colone_as_ScalaList(): Unit = {
+    def get_Columns_as_ScalaList(): Unit = {
       println(df.columns.toList.map(x => '"' + x + '"'))
     }
 
-    def describe_type_var(typedata_colone: DataType = DoubleType): Unit = {
-      if (typedata_colone == StringType) {
-        val df1: DataFrame = df.select_cols_By_Type(typedata_colone)
+    def describe_type_var(Type_Data_Column: DataType = DoubleType): Unit = {
+      if (Type_Data_Column == StringType) {
+        val df1: DataFrame = df.select_cols_By_Type(Type_Data_Column)
         val categorical_var = df1.columns
         for (i <- categorical_var) {
           println("********Variable Catégorielles************")
@@ -59,18 +59,17 @@ package object packfar {
       else {
         println("********Variable Numérique************")
         //      val df2: DataFrame = df.select_cols_By_Type(IntegerType)
-        val numericaal_var = df.columns
-        for (i <- numericaal_var) {
+        val numerical_var = df.columns
+        for (i <- numerical_var) {
           df.select(i).summary().show(truncate = false)
           println("------------------------------------")
         }
       }
     }
 
-    def select_categorical_var_and_impute_na(): DataFrame = {
-      val df_imputed = df.select_cols_By_Type(StringType).na.replace(df.columns, Map("NA" -> "novalue"))
+    def select_categorical_var_and_impute_na(a: String="NA",b:String="NoValue"): DataFrame = {
+      val df_imputed = df.select_cols_By_Type(StringType).na.replace(df.columns, Map(a -> b))
       df_imputed
-
     }
 
     def select_Impute_And_Transform_categorical_to_numerical(): DataFrame = {
@@ -83,9 +82,7 @@ package object packfar {
           .fit(df1)
       }
       val pipeline = new Pipeline().setStages(inds).fit(df1).transform(df1)
-      pipeline
-        .select_cols_by_names(pipeline.columns.filter(x => x.endsWith("catI"))
-          .toList).toDF(feat: _*)
+      pipeline.select_cols_by_names(pipeline.columns.filter(x => x.endsWith("catI")).toList).toDF(feat: _*)
     }
 
     def conveting_multiple_columns_to_specific_DataType(convert_to: DataType): DataFrame = {
@@ -96,18 +93,32 @@ package object packfar {
       df_returned
     }
 
-    def impute_numeric_vars_with_mean_or_median(strategy_imputation_mean_or_median: String = "mean"): DataFrame = {
-      if (!Set("mean", "median").contains(strategy_imputation_mean_or_median)) {
-        println("le parametre d'imputation doit apartenir à {mean,median}!")
-        null
-      } else {
-        val df_col_names = df.columns
-        val df_intermediary = new Imputer().setInputCols(df_col_names)
-          .setOutputCols(df_col_names.map(x => x + "IMPUTED")).setStrategy(strategy_imputation_mean_or_median).fit(df).transform(df)
-        val df_returned = df_intermediary.select_cols_by_names(df_intermediary.columns.filter(x => x.endsWith("IMPUTED")).toList).toDF(df_col_names: _*)
-        df_returned
-      }
+    def cast_all_columns_to_numeric(convert_to: DataType,my_strategy:String="mean"): DataFrame = {
+      var df1 = df
+      df1.columns.foreach(x => df1 = df1.withColumn(x + "NewColumn", col(x).cast(convert_to)))
+      val df2 = df1.select(df1.columns.filter(x => x.endsWith("NewColumn")).map(x => col(x)): _*).toDF(df.columns: _*)
+
+      val my_impute = new Imputer()
+        .setStrategy(my_strategy)
+        .setInputCols(df2.columns)
+        .setOutputCols(df2.columns.map(x => x + "imputed"))
+
+      val df3 = my_impute.fit(df2).transform(df2)
+      val df4 = df3.select(df3.columns.filter(x => x.endsWith("imputed")).map(x => col(x)): _*).toDF(df.columns: _*)
+      df4
     }
+//    def impute_numeric_vars_with_mean_or_median(strategy_Imputation_mean_or_median: String = "mean"): DataFrame = {
+//      if (!Set("mean", "median").contains(strategy_Imputation_mean_or_median)) {
+//        println("le parametre d'imputation doit apartenir à {mean,median}!")
+//        null
+//      } else {
+//        val df_col_names = df.columns
+//        val df_intermediary = new Imputer().setInputCols(df_col_names)
+//          .setOutputCols(df_col_names.map(x => x + "IMPUTED")).setStrategy(strategy_Imputation_mean_or_median).fit(df).transform(df)
+//        val df_returned = df_intermediary.select_cols_by_names(df_intermediary.columns.filter(x => x.endsWith("IMPUTED")).toList).toDF(df_col_names: _*)
+//        df_returned
+//      }
+//    }
 
     def convert_dateframe_integers_type_to_dates(): DataFrame = {
       var df0 = df
@@ -120,6 +131,7 @@ package object packfar {
       //        .withColumn("a",year(col("YearRemodAdd"))-year(col("YearBuilt")))
       //      df55.show()
     }
+
     def regularisation_training_compared_to_testing(df_train: DataFrame, df_test: DataFrame, nb_classe: Int = 100, nb_itter: Int = 20): List[DataFrame] = {
       val to_predict_var = df_train.columns.toSet.diff(df_test.columns.toSet).head
       val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
@@ -139,7 +151,8 @@ package object packfar {
 
 
   }
-  def regularisation_training_compared_to_testing(df_train: DataFrame, df_test: DataFrame, nb_classe: Int = 20, nb_itter: Int = 20): List[DataFrame] = {
+
+  def regularisation_training_compared_to_testing(df_train: DataFrame, df_test: DataFrame, nb_classe: Int = 300, nb_itter: Int = 20): List[DataFrame] = {
     val to_predict_var = df_train.columns.toSet.diff(df_test.columns.toSet).head
     val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
     val df_train_assembled = assembler.transform(df_train).select("features", to_predict_var)
@@ -152,32 +165,15 @@ package object packfar {
 
     val df_train__assembled_and_regularised = kmean_model.transform(df_train_assembled)
       .where("prediction in" + set_class_test + "")
-      .select("features", to_predict_var).withColumnRenamed(to_predict_var,"label")
-    List(df_train__assembled_and_regularised, df_test_assembled,df_train_assembled.withColumnRenamed(to_predict_var,"label"))
+      .select("features", to_predict_var).withColumnRenamed(to_predict_var, "label")
+    List(df_train__assembled_and_regularised, df_test_assembled)
   }
 
-
-  def regularisation_training_compared_to_testing_bis(df: DataFrame, to_predict_var:String,nb_classe: Int = 20, nb_itter: Int = 20): List[DataFrame] = {
-    val df_train=df.randomSplit(Array(0.7,0.3))(0)
-    val df_test=df.randomSplit(Array(0.7,0.3))(1).drop(to_predict_var)
-    val df_testBIS=df.randomSplit(Array(0.7,0.3))(1)
-
-    val assembler = new VectorAssembler().setInputCols(df_test.columns).setOutputCol("features")
-
-    val df_train_assembled = assembler.transform(df_train).select("features", to_predict_var)
-    val df_test_assembled = assembler.transform(df_test).select("features")
-    val df_test_assembledBIS = assembler.transform(df_testBIS).select("features",to_predict_var)
-
-    val kmean_model = new KMeans().setK(nb_classe).setMaxIter(nb_itter).setSeed(123).fit(df_train_assembled)
-
-    val set_class_test = kmean_model.transform(df_test_assembled).select("prediction").rdd.map(x => x(0)).collect().toList
-      .distinct.toString.replace("List", "")
-
-    val df_train__assembled_and_regularised = kmean_model.transform(df_train_assembled)
-      .where("prediction in" + set_class_test + "")
-      .select("features", to_predict_var).withColumnRenamed(to_predict_var,"label")
-    List(df_train__assembled_and_regularised, df_test_assembled,df_test_assembledBIS.withColumnRenamed(to_predict_var,"label"))
+  import java.io._
+  def delete(file: File) {
+    if (file.isDirectory)
+      Option(file.listFiles).map(_.toList).getOrElse(Nil).foreach(delete)
+    file.delete
   }
-
 
 }
