@@ -152,20 +152,21 @@ package object packfar {
     val spark = beginspark.get_local_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    val df_brut_test: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(spatial_colums_type:_*) //to get data consistency between train and test
-    val df_brut_train: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(spatial_colums_type:_*)
+    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(spatial_colums_type:_*) //to get data consistency between train and test
+    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(spatial_colums_type:_*)
 
-    val df_ID_train = df_brut_train.select("Id")
-    val df_ID_test = df_brut_test.select("Id")
-    val df_cible = df_brut_train.select("SalePrice").cast_all_columns_to_numeric(FloatType)
+    val df_train_ID = df_train_brut.select("Id")
+    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(FloatType)
+    val
+    df_test_ID = df_test_brut.select("Id")
 
     //  extracrion des type de variable numeric
-    val test_features = df_brut_train.select_cols_By_Type(IntegerType).
+    val test_features = df_test_brut.select_cols_By_Type(IntegerType).
       drop("Id","SalePrice").cast_all_columns_to_numeric(FloatType)
 
-    val train_features = df_brut_test.select_cols_by_names(test_features.columns.toList).cast_all_columns_to_numeric(FloatType).
-      join_df2_by_index(df_cible)
-    val DATA_train_test_IDtrain_ID_test_CIBLE = List(train_features, test_features, df_ID_train, df_ID_test)
+    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList).cast_all_columns_to_numeric(FloatType).
+      join_df2_by_index(df_train_cible)
+    val DATA_train_test_IDtrain_ID_test_CIBLE = List(train_features, test_features, df_train_ID, df_test_ID)
     DATA_train_test_IDtrain_ID_test_CIBLE
   }
 
