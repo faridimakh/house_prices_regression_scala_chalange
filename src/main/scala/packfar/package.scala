@@ -188,18 +188,18 @@ package object packfar {
       .save(where_is_Your_model + "/" + "predictions_" + model_name)
   }
 
-  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
-                    , MaxBins: Array[Int] = Array(2, 3) //Array(2,3,8,12,15)
-                    , maxDepth: Array[Int] = Array(1, 3) //Array(1,3,5,10,12,15,20,30)
+  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame//, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
+                    , MaxBins: Array[Int] = Array(2,3,8,12,15)
+                    , maxDepth: Array[Int] = Array(1,2,3,5,10,12,15)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
     val model = new RandomForestRegressor()
-      .setFeaturesCol("features")
+      .setFeaturesCol("features").setNumTrees(1500)
       .setLabelCol("label")
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
-      .addGrid(model.numTrees, numTrees)
+//      .addGrid(model.numTrees, numTrees)
       .addGrid(model.maxBins, MaxBins)
       .addGrid(model.maxDepth, maxDepth)
       .build()
