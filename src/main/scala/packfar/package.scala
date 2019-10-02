@@ -13,7 +13,17 @@ import org.apache.spark.sql.types._
 package object packfar {
   val work_path = "/home/farid/Bureau/kaggHousPrice"
   val data_path = "/home/farid/Bureau/kaggHousPrice/Data"
-  val spatial_colums_type=List("LotFrontage", "MasVnrArea","GarageYrBlt","YearBuilt", "YearRemodAdd", "YrSold")
+
+  final val ls_id_type: List[String] = List("Id")
+  final val ls_cible_type: List[String] = List("SalePrice")
+  final val spatial_colums_type: List[String] = List("BsmtFinSF1", "LotFrontage", "MasVnrArea", "GarageYrBlt", "YearBuilt",
+    "GarageCars", "GarageArea", "YearRemodAdd", "YrSold", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF",
+    "BsmtFullBath", "BsmtHalfBath")
+
+  final val Numerical_columns_type: List[String] = List("MSSubClass", "LotArea", "OverallQual", "OverallCond",
+    "1stFlrSF", "2ndFlrSF", "LowQualFinSF", "GrLivArea", "FullBath", "HalfBath", "BedroomAbvGr",
+    "KitchenAbvGr", "TotRmsAbvGrd", "Fireplaces", "WoodDeckSF", "OpenPorchSF", "EnclosedPorch",
+    "3SsnPorch", "ScreenPorch", "PoolArea", "MiscVal", "MoSold")
 
   implicit class DataFrameEXtend(df: DataFrame) {
     def select_cols_By_Type(column_Type: DataType): DataFrame = {
@@ -54,25 +64,10 @@ package object packfar {
     }
 
     def describe_type_var(Type_Data_Column: DataType = DoubleType): Unit = {
-      if (Type_Data_Column == StringType) {
-        val df1: DataFrame = df.select_cols_By_Type(Type_Data_Column)
-        val categorical_var = df1.columns
-        for (i <- categorical_var) {
-          println("********Variable Catégorielles************")
-          df.groupBy(i).count().show(truncate = false)
-          println("------------------------------------")
-        }
-
-      }
-      else {
-        println("********Variable Numérique************")
-        //      val df2: DataFrame = df.select_cols_By_Type(IntegerType)
-        val numerical_var = df.columns
-        for (i <- numerical_var) {
-          df.select(i).summary().show(truncate = false)
-          println("------------------------------------")
-        }
-      }
+      if (Type_Data_Column == StringType)
+        df.columns.foreach(x => df.groupBy(x).count().orderBy("count").show(10))
+      else
+        df.summary().show(10)
     }
 
     def select_categorical_var_and_impute_na(a: String = "NA", b: String = "NoValue"): DataFrame = {
@@ -152,22 +147,60 @@ package object packfar {
     val spark = beginspark.get_local_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(spatial_colums_type:_*) //to get data consistency between train and test
-    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(spatial_colums_type:_*)
+    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(spatial_colums_type: _*) //to get data consistency between train and test
+    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(spatial_colums_type: _*)
 
     val df_train_ID = df_train_brut.select("Id")
-    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(FloatType)
+    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(DoubleType)
     val
     df_test_ID = df_test_brut.select("Id")
 
     //  extracrion des type de variable numeric
     val test_features = df_test_brut.select_cols_By_Type(IntegerType).
-      drop("Id","SalePrice").cast_all_columns_to_numeric(FloatType)
+      drop("Id", "SalePrice").cast_all_columns_to_numeric(DoubleType)
 
-    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList).cast_all_columns_to_numeric(FloatType).
+    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList).cast_all_columns_to_numeric(DoubleType).
       join_df2_by_index(df_train_cible)
-    val DATA_train_test_IDtrain_ID_test_CIBLE = List(train_features, test_features, df_train_ID, df_test_ID)
-    DATA_train_test_IDtrain_ID_test_CIBLE
+     List(train_features, test_features, df_train_ID, df_test_ID)
+      }
+
+  def get_final_trainTest_Categorial(): List[DataFrame] = {
+    val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
+    val spark = beginspark.get_local_spark_session()
+    spark.sparkContext.setLogLevel("WARN")
+
+    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv")
+    //to get data consistency between train and test
+    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv")
+
+    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(DoubleType)
+    val df_train_ID = df_train_brut.select("Id")
+
+    val  df_test_ID = df_test_brut.select("Id")
+
+    val df_cat_train = df_train_brut
+      .drop(spatial_colums_type ::: Numerical_columns_type: _*)
+      .select_Impute_And_Transform_categorical_to_numerical()
+      .join_df2_by_index(df_train_cible)
+
+    val df_cat_test = df_test_brut
+      .drop(spatial_colums_type ::: Numerical_columns_type: _*)
+      .select_Impute_And_Transform_categorical_to_numerical()
+
+     List(df_cat_train, df_cat_test,df_train_ID,df_test_ID)
+  }
+
+  def merge_get_twice_num_cat(): List[DataFrame] = {
+    val ls_data_num = get_final_trainTest_Num()
+    val ls_data_cat = get_final_trainTest_Categorial()
+    val dfnumtr = ls_data_num.head.join_df2_by_index(ls_data_num(2)).drop("SalePrice")
+    val dfcatr=ls_data_cat.head.join_df2_by_index(ls_data_cat(2))
+
+    val dfnumtst = ls_data_num(1).join_df2_by_index(ls_data_num(3))
+    val dfcatst=ls_data_cat(1).join_df2_by_index(ls_data_cat(3))
+
+    val num_cat_test_transformed_and_merged = ls_data_num(1).join_df2_by_index(ls_data_cat(1))
+    List[DataFrame](dfnumtr.join(dfcatr,"Id").drop("Id"), dfnumtst.join(dfcatst,"Id").drop("Id"),ls_data_num(2),ls_data_num(3))
   }
 
   def delete_Directory(file: File) {
@@ -188,9 +221,9 @@ package object packfar {
       .save(where_is_Your_model + "/" + "predictions_" + model_name)
   }
 
-  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame//, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
-                    , MaxBins: Array[Int] = Array(2,3,8,12,15)
-                    , maxDepth: Array[Int] = Array(1,2,3,5,10,12,15)
+  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame //, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
+                    , MaxBins: Array[Int] = Array(2, 3, 8, 12, 15)
+                    , maxDepth: Array[Int] = Array(1, 2, 3, 5, 10, 12, 15)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
@@ -199,7 +232,7 @@ package object packfar {
       .setLabelCol("label")
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
-//      .addGrid(model.numTrees, numTrees)
+      //      .addGrid(model.numTrees, numTrees)
       .addGrid(model.maxBins, MaxBins)
       .addGrid(model.maxDepth, maxDepth)
       .build()
@@ -213,24 +246,24 @@ package object packfar {
     val cvModel = cv.fit(train)
     //---------------------------------------------------------------
     //evaluation
-    Array("mse", "rmse", "r2", "mae").foreach(x=>println(x+" :"+new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
+    Array("mse", "rmse", "r2", "mae").foreach(x => println(x + " :" + new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
     //---------------------------------------------------------------
     //  save the workflow
     cvModel.write.overwrite().save(work_path + "/" + RF_model_name)
   }
 
-  def Buld_RF_modelspe( train: DataFrame, numFolds: Int = 10) {
+  def Buld_RF_modelspe(train: DataFrame, numFolds: Int = 10) {
 
     val model = new RandomForestRegressor()
       .setFeaturesCol("features")
-      .setLabelCol("label").setSeed(123).setNumTrees(1000)
+      .setLabelCol("label").setSeed(123).setNumTrees(10)
     //---------------------------------------------------------------
     //  build the workflow
     val cvModel = model.fit(train)
     //---------------------------------------------------------------
     //evaluation
-    Array("mse", "rmse", "r2", "mae").foreach(x=>println(x+" :"+new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
-    println("NumTrees:   "+cvModel.getNumTrees)
+    Array("mse", "rmse", "r2", "mae").foreach(x => println(x + " :" + new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
+    println("NumTrees:   " + cvModel.getNumTrees)
   }
 
 }

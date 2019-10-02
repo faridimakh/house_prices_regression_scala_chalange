@@ -15,10 +15,10 @@ object Numeric_Main_mod extends App {
   val df_ID_test = lisdatanum(3)
   //****************************************************************************************************************************************************************
   val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = 600) //list of dataframes
-  val train = list_datas_regularized.head
-  val test = list_datas_regularized(1)
-  Buld_RF_model(train=train)
-  take_test_prediction_with_existing_model(test,df_ID_test=df_ID_test)
+  val df_num_train = list_datas_regularized.head
+  val df_num_test = list_datas_regularized(1)
+  Buld_RF_model(train=df_num_train)
+  take_test_prediction_with_existing_model(df_num_test,df_ID_test=df_ID_test)
 
   spark.stop()
 }
