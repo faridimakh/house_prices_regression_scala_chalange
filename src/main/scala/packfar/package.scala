@@ -54,8 +54,8 @@ package object packfar {
     }
 
     def join_df2_by_index(df0: DataFrame): DataFrame = {
-      val df1 = df.withColumn("Id2", monotonically_increasing_id)
-      val df2 = df0.withColumn("Id2", monotonically_increasing_id)
+      val df1 = df.coalesce(1).withColumn("Id2", monotonically_increasing_id)
+      val df2 = df0.coalesce(1).withColumn("Id2", monotonically_increasing_id)
       df1.join(df2, "Id2").drop("Id2")
     }
 
@@ -212,7 +212,7 @@ package object packfar {
     val myRFmodel = CrossValidatorModel.load(where_is_Your_model + "/" + model_name)
 
     delete_Directory(new java.io.File(where_is_Your_model + "/" + "predictions_" + model_name))
-    df_ID_test.join_df2_by_index(myRFmodel.transform(test).coalesce(1)
+    df_ID_test.join_df2_by_index(myRFmodel.transform(test)
       .select("prediction")).withColumnRenamed("prediction", "SalePrice")
       .coalesce(1)
       .write.format("com.databricks.spark.csv")
@@ -221,13 +221,13 @@ package object packfar {
   }
 
   def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame //, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
-                    , MaxBins: Array[Int] = Array(30, 32,36,51)
-                    , maxDepth: Array[Int] = Array(2, 3, 5, 7)
-                    , numFolds: Int = 10) {
+                    , MaxBins: Array[Int] = Array(36,45,55,65)
+                    , maxDepth: Array[Int] = Array(3,7,9,13)
+                    , numFolds: Int = 3) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
     val model = new RandomForestRegressor()
-      .setFeaturesCol("features").setNumTrees(1000)
+      .setFeaturesCol("features").setNumTrees(200)
       .setLabelCol("label").setMaxMemoryInMB(512)
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
