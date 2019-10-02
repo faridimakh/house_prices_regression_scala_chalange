@@ -59,6 +59,7 @@ package object packfar {
       df1.join(df2, "Id2").drop("Id2")
     }
 
+
     def get_Columns_as_ScalaList(): Unit = {
       println(df.columns.toList.map(x => '"' + x + '"'))
     }
@@ -194,13 +195,11 @@ package object packfar {
     val ls_data_num = get_final_trainTest_Num()
     val ls_data_cat = get_final_trainTest_Categorial()
     val dfnumtr = ls_data_num.head.join_df2_by_index(ls_data_num(2)).drop("SalePrice")
-    val dfcatr=ls_data_cat.head.join_df2_by_index(ls_data_cat(2))
+    val dfcattr=ls_data_cat.head.join_df2_by_index(ls_data_cat(2))
 
     val dfnumtst = ls_data_num(1).join_df2_by_index(ls_data_num(3))
-    val dfcatst=ls_data_cat(1).join_df2_by_index(ls_data_cat(3))
-
-    val num_cat_test_transformed_and_merged = ls_data_num(1).join_df2_by_index(ls_data_cat(1))
-    List[DataFrame](dfnumtr.join(dfcatr,"Id").drop("Id"), dfnumtst.join(dfcatst,"Id").drop("Id"),ls_data_num(2),ls_data_num(3))
+    val dfcattst=ls_data_cat(1).join_df2_by_index(ls_data_cat(3))
+    List[DataFrame](dfnumtr.join(dfcattr,"Id").drop("Id"), dfnumtst.join(dfcattst,"Id").drop("Id"),ls_data_num(2),ls_data_num(3))
   }
 
   def delete_Directory(file: File) {
@@ -213,7 +212,7 @@ package object packfar {
     val myRFmodel = CrossValidatorModel.load(where_is_Your_model + "/" + model_name)
 
     delete_Directory(new java.io.File(where_is_Your_model + "/" + "predictions_" + model_name))
-    df_ID_test.join_df2_by_index(myRFmodel.transform(test)
+    df_ID_test.join_df2_by_index(myRFmodel.transform(test).coalesce(1)
       .select("prediction")).withColumnRenamed("prediction", "SalePrice")
       .coalesce(1)
       .write.format("com.databricks.spark.csv")
@@ -222,14 +221,14 @@ package object packfar {
   }
 
   def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame //, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
-                    , MaxBins: Array[Int] = Array(2, 3, 8, 12, 15)
-                    , maxDepth: Array[Int] = Array(1, 2, 3, 5, 10, 12, 15)
+                    , MaxBins: Array[Int] = Array(30, 32,36,51)
+                    , maxDepth: Array[Int] = Array(2, 3, 5, 7)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
     val model = new RandomForestRegressor()
-      .setFeaturesCol("features").setNumTrees(1500)
-      .setLabelCol("label")
+      .setFeaturesCol("features").setNumTrees(1000)
+      .setLabelCol("label").setMaxMemoryInMB(512)
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
       //      .addGrid(model.numTrees, numTrees)
@@ -252,7 +251,7 @@ package object packfar {
     cvModel.write.overwrite().save(work_path + "/" + RF_model_name)
   }
 
-  def Buld_RF_modelspe(train: DataFrame, numFolds: Int = 10) {
+  def Buld_RF_modelspe(train: DataFrame, numFolds: Int = 5) {
 
     val model = new RandomForestRegressor()
       .setFeaturesCol("features")
