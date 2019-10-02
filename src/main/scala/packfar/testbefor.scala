@@ -5,22 +5,23 @@ object testbefor extends App {
   val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
   val spark = beginspark.get_local_spark_session()
   spark.sparkContext.setLogLevel("WARN")
-
   //****************************************************************************************************************************************************************
   //import my data NUMERIC
-  val lisdatanum = merge_get_twice_num_cat()
-  val train_features = lisdatanum.head
-  val test_features = lisdatanum(1)
-  val df_ID_train = lisdatanum(2)
-  val df_ID_test = lisdatanum(3)
+  val datas_processed = merge_get_twice_num_cat()
+  val train = datas_processed.head
+  val test = datas_processed(1)
+  val Id_train = datas_processed(2)
+  val Id_test = datas_processed(3)
 
   //****************************************************************************************************************************************************************
-  val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = 600) //list of dataframes
-  val df_num_train = list_datas_regularized.head
-  val df_num_test = list_datas_regularized(1)
-    Buld_RF_model(train=df_num_train)
-    take_test_prediction_with_existing_model(df_num_test,df_ID_test=df_ID_test)
-  spark.stop()
+  val train_test_regularized = regularisation_training_compared_to_testing(train, test, nb_classe = 600)
+  //list of dataframes
+  val df_train = train_test_regularized.head
+  val df_test = train_test_regularized(1)
+    Buld_RF_model(train=df_train)
+    take_test_prediction_with_existing_model(df_test,df_ID_test=Id_test)
+  spark.close()
+}
   //  for (i<-List(500,600,700)){
   //  val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = i) //list of dataframes
   //
@@ -35,4 +36,3 @@ object testbefor extends App {
   //
   ////  take_test_prediction_with_existing_model(test = test, df_ID_test = df_ID_test)
   //  }
-}

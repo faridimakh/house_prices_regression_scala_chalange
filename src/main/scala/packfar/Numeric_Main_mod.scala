@@ -8,13 +8,13 @@ object Numeric_Main_mod extends App {
 
   //****************************************************************************************************************************************************************
   //import my data NUMERIC
-  val lisdatanum = get_final_trainTest_Num()
+  val lisdatanum = get_trainTest_Num()
   val train_features = lisdatanum.head
   val test_features = lisdatanum(1)
   val df_ID_train = lisdatanum(2)
   val df_ID_test = lisdatanum(3)
   //****************************************************************************************************************************************************************
-  val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = 600) //list of dataframes
+  val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = 2) //list of dataframes
   val df_num_train = list_datas_regularized.head
   val df_num_test = list_datas_regularized(1)
   Buld_RF_model(train=df_num_train)

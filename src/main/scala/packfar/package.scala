@@ -16,11 +16,11 @@ package object packfar {
 
   final val ls_id_type: List[String] = List("Id")
   final val ls_cible_type: List[String] = List("SalePrice")
-  final val spatial_colums_type: List[String] = List("BsmtFinSF1", "LotFrontage", "MasVnrArea", "GarageYrBlt", "YearBuilt",
+  final val ls_spatial_colums_type: List[String] = List("BsmtFinSF1", "LotFrontage", "MasVnrArea", "GarageYrBlt", "YearBuilt",
     "GarageCars", "GarageArea", "YearRemodAdd", "YrSold", "BsmtFinSF2", "BsmtUnfSF", "TotalBsmtSF",
     "BsmtFullBath", "BsmtHalfBath")
-
-  final val Numerical_columns_type: List[String] = List("MSSubClass", "LotArea", "OverallQual", "OverallCond",
+  final val ls_date_colums_type: List[String] = List("YearBuilt", "YearRemodAdd", "GarageYrBlt", "YrSold")
+  final val ls_Numerical_columns_type: List[String] = List("MSSubClass", "LotArea", "OverallQual", "OverallCond",
     "1stFlrSF", "2ndFlrSF", "LowQualFinSF", "GrLivArea", "FullBath", "HalfBath", "BedroomAbvGr",
     "KitchenAbvGr", "TotRmsAbvGrd", "Fireplaces", "WoodDeckSF", "OpenPorchSF", "EnclosedPorch",
     "3SsnPorch", "ScreenPorch", "PoolArea", "MiscVal", "MoSold")
@@ -97,7 +97,7 @@ package object packfar {
       df_returned
     }
 
-    def cast_all_columns_to_numeric(convert_to: DataType, my_strategy: String = "mean"): DataFrame = {
+    def cast_all_columns_to_numeric(convert_to: DataType = FloatType, my_strategy: String = "mean"): DataFrame = {
       var df1 = df
       df1.columns.foreach(x => df1 = df1.withColumn(x + "NewColumn", col(x).cast(convert_to)))
       val df2 = df1.select(df1.columns.filter(x => x.endsWith("NewColumn")).map(x => col(x)): _*).toDF(df.columns: _*)
@@ -143,16 +143,17 @@ package object packfar {
     List(df_train__assembled_and_regularised, df_test_assembled)
   }
 
-  def get_final_trainTest_Num(): List[DataFrame] = {
+  def get_trainTest_Num(): List[DataFrame] = {
     val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
     val spark = beginspark.get_local_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(spatial_colums_type: _*) //to get data consistency between train and test
-    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(spatial_colums_type: _*)
+    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(ls_spatial_colums_type: _*)
+    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(ls_spatial_colums_type: _*)
 
     val df_train_ID = df_train_brut.select("Id")
-    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(DoubleType)
+    val df_train_cible = df_train_brut.select("SalePrice")
+      .cast_all_columns_to_numeric(DoubleType)
     val
     df_test_ID = df_test_brut.select("Id")
 
@@ -160,10 +161,11 @@ package object packfar {
     val test_features = df_test_brut.select_cols_By_Type(IntegerType).
       drop("Id", "SalePrice").cast_all_columns_to_numeric(DoubleType)
 
-    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList).cast_all_columns_to_numeric(DoubleType).
+    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList)
+      .cast_all_columns_to_numeric(DoubleType).
       join_df2_by_index(df_train_cible)
-     List(train_features, test_features, df_train_ID, df_test_ID)
-      }
+    List(train_features, test_features, df_train_ID, df_test_ID)
+  }
 
   def get_final_trainTest_Categorial(): List[DataFrame] = {
     val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
@@ -177,29 +179,57 @@ package object packfar {
     val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(DoubleType)
     val df_train_ID = df_train_brut.select("Id")
 
-    val  df_test_ID = df_test_brut.select("Id")
+    val df_test_ID = df_test_brut.select("Id")
 
     val df_cat_train = df_train_brut
-      .drop(spatial_colums_type ::: Numerical_columns_type: _*)
+      .drop(ls_spatial_colums_type ::: ls_Numerical_columns_type: _*)
       .select_Impute_And_Transform_categorical_to_numerical()
       .join_df2_by_index(df_train_cible)
 
     val df_cat_test = df_test_brut
-      .drop(spatial_colums_type ::: Numerical_columns_type: _*)
+      .drop(ls_spatial_colums_type ::: ls_Numerical_columns_type: _*)
       .select_Impute_And_Transform_categorical_to_numerical()
 
-     List(df_cat_train, df_cat_test,df_train_ID,df_test_ID)
+    List(df_cat_train, df_cat_test, df_train_ID, df_test_ID)
+  }
+
+  def get_trans_formed_date_type(): List[DataFrame] = {
+    val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
+    val spark = beginspark.get_local_spark_session()
+    spark.sparkContext.setLogLevel("WARN")
+    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").select_cols_by_names(ls_date_colums_type)
+      .convert_df_integers_type_to_dates()
+    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").select_cols_by_names(ls_date_colums_type)
+      .convert_df_integers_type_to_dates()
+    val df1 = df_train_brut
+      .withColumn("x1", datediff(current_date, col(ls_date_colums_type.head)))
+      .withColumn("x2", datediff(current_date, col(ls_date_colums_type(1))))
+      .withColumn("x3", datediff(current_date, col(ls_date_colums_type(2))))
+      .withColumn("x5", datediff(current_date, col(ls_date_colums_type(3)))).drop(ls_date_colums_type: _*)
+      .toDF(ls_date_colums_type: _*).cast_all_columns_to_numeric()
+    val df2 = df_test_brut
+      .withColumn("x1", datediff(current_date, col(ls_date_colums_type.head)))
+      .withColumn("x2", datediff(current_date, col(ls_date_colums_type(1))))
+      .withColumn("x3", datediff(current_date, col(ls_date_colums_type(2))))
+      .withColumn("x5", datediff(current_date, col(ls_date_colums_type(3))))
+      .drop(ls_date_colums_type: _*).toDF(ls_date_colums_type: _*)
+      .cast_all_columns_to_numeric()
+
+    List(df1, df2)
   }
 
   def merge_get_twice_num_cat(): List[DataFrame] = {
-    val ls_data_num = get_final_trainTest_Num()
+    val ls_data_num = get_trainTest_Num()
     val ls_data_cat = get_final_trainTest_Categorial()
-    val dfnumtr = ls_data_num.head.join_df2_by_index(ls_data_num(2)).drop("SalePrice")
-    val dfcattr=ls_data_cat.head.join_df2_by_index(ls_data_cat(2))
-
+    val dfnumtr = ls_data_num.head.join_df2_by_index(ls_data_num(2))
+      .join_df2_by_index(spe_columns_num().head).join_df2_by_index(get_trans_formed_date_type().head)
+      .drop("SalePrice")
+    val dfcattr = ls_data_cat.head.join_df2_by_index(ls_data_cat(2))
     val dfnumtst = ls_data_num(1).join_df2_by_index(ls_data_num(3))
-    val dfcattst=ls_data_cat(1).join_df2_by_index(ls_data_cat(3))
-    List[DataFrame](dfnumtr.join(dfcattr,"Id").drop("Id"), dfnumtst.join(dfcattst,"Id").drop("Id"),ls_data_num(2),ls_data_num(3))
+      .join_df2_by_index(spe_columns_num()(1)).join_df2_by_index(get_trans_formed_date_type()(1))
+    val dfcattst = ls_data_cat(1).join_df2_by_index(ls_data_cat(3))
+    List[DataFrame](dfnumtr.join(dfcattr, "Id").drop("Id"),
+      dfnumtst.join(dfcattst, "Id").drop("Id"), ls_data_num(2), ls_data_num(3))
   }
 
   def delete_Directory(file: File) {
@@ -220,14 +250,14 @@ package object packfar {
       .save(where_is_Your_model + "/" + "predictions_" + model_name)
   }
 
-  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame //, numTrees: Array[Int] = Array(5, 100) //Array(50,100,500,1000,3000)
-                    , MaxBins: Array[Int] = Array(36,45,55,65)
-                    , maxDepth: Array[Int] = Array(3,7,9,13)
-                    , numFolds: Int = 3) {
+  def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame
+                    , MaxBins: Array[Int] = Array(36, 47,65)
+                    , maxDepth: Array[Int] = Array(5, 11,21)
+                    , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
     val model = new RandomForestRegressor()
-      .setFeaturesCol("features").setNumTrees(200)
+      .setFeaturesCol("features").setNumTrees(1000)
       .setLabelCol("label").setMaxMemoryInMB(512)
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
@@ -249,6 +279,22 @@ package object packfar {
     //---------------------------------------------------------------
     //  save the workflow
     cvModel.write.overwrite().save(work_path + "/" + RF_model_name)
+  }
+
+  def spe_columns_num(): List[DataFrame] = {
+    val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
+    val spark = beginspark.get_local_spark_session()
+    spark.sparkContext.setLogLevel("WARN")
+    val df_brut_test: DataFrame = beginspark.importDF(data_path + "/test.csv")
+    //to get data consistency between train and test
+    val df_brut_train: DataFrame = beginspark.importDF(data_path + "/train.csv")
+    val df_spe_train = df_brut_train.select_cols_by_names(ls_spatial_colums_type)
+      .drop(ls_date_colums_type:_*)
+      .cast_all_columns_to_numeric()
+    val df_spe_test = df_brut_test.select_cols_by_names(ls_spatial_colums_type)
+      .drop(ls_date_colums_type:_*)
+      .cast_all_columns_to_numeric()
+    List(df_spe_train, df_spe_test)
   }
 
   def Buld_RF_modelspe(train: DataFrame, numFolds: Int = 5) {
