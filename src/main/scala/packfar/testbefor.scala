@@ -14,8 +14,6 @@ object testbefor extends App {
   val Id_test = datas_processed(3)
 
   //****************************************************************************************************************************************************************
-  val train_test_regularized = regularisation_training_compared_to_testing(train, test, nb_classe = 900)
-  //list of dataframes
 
 }
   //  for (i<-List(500,600,700)){
