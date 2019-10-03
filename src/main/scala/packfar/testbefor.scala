@@ -20,7 +20,7 @@ object testbefor extends App {
   val df_test = train_test_regularized(1)
     Buld_RF_model(train=df_train)
     take_test_prediction_with_existing_model(df_test,df_ID_test=Id_test)
-  spark.close()
+
 }
   //  for (i<-List(500,600,700)){
   //  val list_datas_regularized = regularisation_training_compared_to_testing(train_features, test_features, nb_classe = i) //list of dataframes
