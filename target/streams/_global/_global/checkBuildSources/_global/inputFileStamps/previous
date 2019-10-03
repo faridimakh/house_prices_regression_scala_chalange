@@ -1,1 +1,1 @@
-["sbt.Task[scala.collection.Seq[scala.Tuple2[java.nio.file.Path, sbt.nio.FileStamp]]]",{"hashes":[["/home/farid/Bureau/kaggHousPrice/build.sbt","936df57dbbac5775272fe26fb1dc3a477e5b91ba"]],"lastModifiedTimes":[]}]
+["sbt.Task[scala.collection.Seq[scala.Tuple2[java.nio.file.Path, sbt.nio.FileStamp]]]",{"hashes":[["/home/farid/Bureau/house_prices_regression_scala_chalange/build.sbt","936df57dbbac5775272fe26fb1dc3a477e5b91ba"]],"lastModifiedTimes":[]}]

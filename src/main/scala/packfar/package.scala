@@ -247,8 +247,8 @@ package object packfar {
   }
 
   def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame
-                    , MaxBins: Array[Int] = Array(36)
-                    , maxDepth: Array[Int] = Array(5)
+                    , MaxBins: Array[Int] = Array(5,7,17,27,37,47,67)
+                    , maxDepth: Array[Int] = Array(5,17,27,37,47,57)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
