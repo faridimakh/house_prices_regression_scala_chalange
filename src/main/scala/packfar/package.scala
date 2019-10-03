@@ -11,8 +11,11 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 package object packfar {
-  val work_path = "/home/farid/Bureau/kaggHousPrice"
+
   val data_path = "/home/farid/Bureau/kaggHousPrice/Data"
+  val work_path = "/home/farid/Bureau/kaggHousPrice"
+  final val df_train_brut: DataFrame = new Begining_spark_Local_Import().importDF(data_path + "/train.csv")
+  final val df_test_brut: DataFrame =new Begining_spark_Local_Import().importDF(data_path + "/test.csv")
 
   final val ls_id_type: List[String] = List("Id")
   final val ls_cible_type: List[String] = List("SalePrice")
@@ -43,7 +46,7 @@ package object packfar {
 
     def join_df2_by_key(df1: DataFrame, key_join: Seq[String], type_of_join: String = "inner"): DataFrame = {
       val possible_joins = Set("inner", "cross", "outer", "full", "full_outer", "left", "left_outer", "right", "right_outer", "left_semi", "left_anti")
-      // TODO: make sure that key_join exist sur in df and df1
+      // TODO: make sure that key_join exist  in df and df1
       if (!possible_joins.contains(type_of_join)) {
         println("type_of_join parameter must be in : [" + possible_joins.reduce(_ + ", " + _) + "]")
         null
@@ -148,35 +151,27 @@ package object packfar {
     val spark = beginspark.get_local_spark_session()
     spark.sparkContext.setLogLevel("WARN")
 
-    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").drop(ls_spatial_colums_type: _*)
-    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").drop(ls_spatial_colums_type: _*)
+    val df0_tst: DataFrame =df_test_brut.drop(ls_spatial_colums_type: _*)
+    val df0_trn: DataFrame = df_train_brut.drop(ls_spatial_colums_type: _*)
 
-    val df_train_ID = df_train_brut.select("Id")
-    val df_train_cible = df_train_brut.select("SalePrice")
+    val df_train_ID = df0_trn.select("Id")
+    val df_train_cible = df0_trn.select("SalePrice")
       .cast_all_columns_to_numeric(DoubleType)
     val
-    df_test_ID = df_test_brut.select("Id")
+    df_test_ID = df0_tst.select("Id")
 
     //  extracrion des type de variable numeric
-    val test_features = df_test_brut.select_cols_By_Type(IntegerType).
+    val test_features = df0_tst.select_cols_By_Type(IntegerType).
       drop("Id", "SalePrice").cast_all_columns_to_numeric(DoubleType)
 
-    val train_features = df_train_brut.select_cols_by_names(test_features.columns.toList)
+    val train_features = df0_trn.select_cols_by_names(test_features.columns.toList)
       .cast_all_columns_to_numeric(DoubleType).
       join_df2_by_index(df_train_cible)
     List(train_features, test_features, df_train_ID, df_test_ID)
   }
-
   def get_final_trainTest_Categorial(): List[DataFrame] = {
-    val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
-    val spark = beginspark.get_local_spark_session()
-    spark.sparkContext.setLogLevel("WARN")
-
-    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv")
-    //to get data consistency between train and test
-    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv")
-
-    val df_train_cible = df_train_brut.select("SalePrice").cast_all_columns_to_numeric(DoubleType)
+    val df_train_cible = df_train_brut.select("SalePrice")
+      .cast_all_columns_to_numeric(DoubleType)
     val df_train_ID = df_train_brut.select("Id")
 
     val df_test_ID = df_test_brut.select("Id")
@@ -194,20 +189,20 @@ package object packfar {
   }
 
   def get_trans_formed_date_type(): List[DataFrame] = {
-    val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
-    val spark = beginspark.get_local_spark_session()
-    spark.sparkContext.setLogLevel("WARN")
-    val df_test_brut: DataFrame = beginspark.importDF(data_path + "/test.csv").select_cols_by_names(ls_date_colums_type)
+    val df0_test: DataFrame = df_test_brut
+      .select_cols_by_names(ls_date_colums_type)
       .convert_df_integers_type_to_dates()
-    val df_train_brut: DataFrame = beginspark.importDF(data_path + "/train.csv").select_cols_by_names(ls_date_colums_type)
+    val df0_train: DataFrame = df_train_brut
+      .select_cols_by_names(ls_date_colums_type)
       .convert_df_integers_type_to_dates()
-    val df1 = df_train_brut
+    val df1 = df0_train
       .withColumn("x1", datediff(current_date, col(ls_date_colums_type.head)))
       .withColumn("x2", datediff(current_date, col(ls_date_colums_type(1))))
       .withColumn("x3", datediff(current_date, col(ls_date_colums_type(2))))
-      .withColumn("x5", datediff(current_date, col(ls_date_colums_type(3)))).drop(ls_date_colums_type: _*)
+      .withColumn("x5", datediff(current_date, col(ls_date_colums_type(3))))
+      .drop(ls_date_colums_type: _*)
       .toDF(ls_date_colums_type: _*).cast_all_columns_to_numeric()
-    val df2 = df_test_brut
+    val df2 = df0_test
       .withColumn("x1", datediff(current_date, col(ls_date_colums_type.head)))
       .withColumn("x2", datediff(current_date, col(ls_date_colums_type(1))))
       .withColumn("x3", datediff(current_date, col(ls_date_colums_type(2))))
@@ -217,7 +212,6 @@ package object packfar {
 
     List(df1, df2)
   }
-
   def merge_get_twice_num_cat(): List[DataFrame] = {
     val ls_data_num = get_trainTest_Num()
     val ls_data_cat = get_final_trainTest_Categorial()
@@ -251,13 +245,13 @@ package object packfar {
   }
 
   def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame
-                    , MaxBins: Array[Int] = Array(36, 47,65)
-                    , maxDepth: Array[Int] = Array(5, 11,21)
+                    , MaxBins: Array[Int] = Array(36)
+                    , maxDepth: Array[Int] = Array(5)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
     val model = new RandomForestRegressor()
-      .setFeaturesCol("features").setNumTrees(1000)
+      .setFeaturesCol("features").setNumTrees(2)
       .setLabelCol("label").setMaxMemoryInMB(512)
     //---------------------------------------------------------------
     val paramGrid = new ParamGridBuilder()
@@ -275,7 +269,8 @@ package object packfar {
     val cvModel = cv.fit(train)
     //---------------------------------------------------------------
     //evaluation
-    Array("mse", "rmse", "r2", "mae").foreach(x => println(x + " :" + new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
+    Array("mse", "rmse", "r2", "mae").foreach(x => println(x + " :" + new RegressionEvaluator()
+      .setMetricName(x).evaluate(cvModel.transform(train))))
     //---------------------------------------------------------------
     //  save the workflow
     cvModel.write.overwrite().save(work_path + "/" + RF_model_name)
@@ -285,13 +280,11 @@ package object packfar {
     val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
     val spark = beginspark.get_local_spark_session()
     spark.sparkContext.setLogLevel("WARN")
-    val df_brut_test: DataFrame = beginspark.importDF(data_path + "/test.csv")
     //to get data consistency between train and test
-    val df_brut_train: DataFrame = beginspark.importDF(data_path + "/train.csv")
-    val df_spe_train = df_brut_train.select_cols_by_names(ls_spatial_colums_type)
+    val df_spe_train = df_train_brut.select_cols_by_names(ls_spatial_colums_type)
       .drop(ls_date_colums_type:_*)
       .cast_all_columns_to_numeric()
-    val df_spe_test = df_brut_test.select_cols_by_names(ls_spatial_colums_type)
+    val df_spe_test = df_test_brut.select_cols_by_names(ls_spatial_colums_type)
       .drop(ls_date_colums_type:_*)
       .cast_all_columns_to_numeric()
     List(df_spe_train, df_spe_test)
@@ -307,7 +300,9 @@ package object packfar {
     val cvModel = model.fit(train)
     //---------------------------------------------------------------
     //evaluation
-    Array("mse", "rmse", "r2", "mae").foreach(x => println(x + " :" + new RegressionEvaluator().setMetricName(x).evaluate(cvModel.transform(train))))
+    Array("mse", "rmse", "r2", "mae")
+      .foreach(x => println(x + " :" + new RegressionEvaluator()
+      .setMetricName(x).evaluate(cvModel.transform(train))))
     println("NumTrees:   " + cvModel.getNumTrees)
   }
 
