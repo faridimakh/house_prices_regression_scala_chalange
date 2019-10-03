@@ -12,7 +12,7 @@ import org.apache.spark.sql.types._
 
 package object packfar {
 
-  final val work_path: String = "/home/farid/Bureau/kaggHousPrice"
+  final val work_path: String = System.getProperty("user.dir")
   final val data_path: String = work_path + "/Data"
   final val df_train_brut: DataFrame = new Begining_spark_Local_Import().importDF(data_path + "/train.csv")
   final val df_test_brut: DataFrame = new Begining_spark_Local_Import().importDF(data_path + "/test.csv")
@@ -247,8 +247,8 @@ package object packfar {
   }
 
   def Buld_RF_model(RF_model_name: String = "RF_model", train: DataFrame
-                    , MaxBins: Array[Int] = Array(5,7,17,27,37,47,67)
-                    , maxDepth: Array[Int] = Array(5,17,27,37,47,57)
+                    , MaxBins: Array[Int] = Array(31,47,67)
+                    , maxDepth: Array[Int] = Array(5,9,17)
                     , numFolds: Int = 10) {
     //supression du modél s'il exist
     delete_Directory(new java.io.File(work_path + "/" + RF_model_name))
