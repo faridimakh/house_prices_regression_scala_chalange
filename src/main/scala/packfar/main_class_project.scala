@@ -1,6 +1,6 @@
 package packfar
 
-object testbefor extends App {
+object main_class_project extends App {
 
   val beginspark: Begining_spark_Local_Import = new Begining_spark_Local_Import()
   val spark = beginspark.get_local_spark_session()
