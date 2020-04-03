@@ -9,11 +9,14 @@ trait step1 extends step0 {
   private lazy val session: SparkSession = new SparkSession.Builder().appName(saprk_name).master(spark_master)
     .config("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false")
     .getOrCreate()
+
   //get set stop log from SparkSession:---------------------------------------------------------------------------------
   session.sparkContext.setLogLevel(log_stop)
+
   //get a loader csv from SparkSession:---------------------------------------------------------------------------------
   lazy val spark_csv_reader: DataFrameReader = session.read.format("csv").option("header", "true").option("inferSchema", "true")
 
+  //function to select columns:-----------------------------------------------------------------------------------------
   def select_cols_By_Type(df: DataFrame, column_Type: DataType): DataFrame = {
     val cols = df.schema.toList
       .filter(x => x.dataType == column_Type)
@@ -21,6 +24,7 @@ trait step1 extends step0 {
     df.select(cols: _*)
   }
 
+  //function to save DataFrame:-----------------------------------------------------------------------------------------
   def save_df(df: DataFrame,
               nb_partition: Int = 1,
               format_saving: String = "com.databricks.spark.csv",
