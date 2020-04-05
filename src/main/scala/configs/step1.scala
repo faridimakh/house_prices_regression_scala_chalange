@@ -14,8 +14,11 @@ trait step1 extends step0 {
   session.sparkContext.setLogLevel(log_stop)
 
   //get a loader csv from SparkSession:---------------------------------------------------------------------------------
-  lazy val spark_csv_reader: DataFrameReader = session.read.format("csv").option("header", "true").option("inferSchema", "true")
-
+//  lazy val spark_csv_reader: DataFrameReader = session.read.format("csv").option("header", "true").option("inferSchema", "true")
+lazy val spark_csv_reader: DataFrameReader = session.read.format("com.databricks.spark.csv").option("header", "true")
+  .option("inferSchema", "true")
+  .option("nullValue", "NA")
+  .option("treatEmptyValuesAsNulls", "true")
   //function to select columns:-----------------------------------------------------------------------------------------
   def select_cols_By_Type(df: DataFrame, column_Type: DataType): DataFrame = {
     val cols = df.schema.toList
